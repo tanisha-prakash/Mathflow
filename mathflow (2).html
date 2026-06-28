@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathflow</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --purple: #7F77DD;
+    --purple-light: #EEEDFE;
+    --purple-dark: #534AB7;
+    --teal: #1D9E75;
+    --teal-light: #E1F5EE;
+    --amber: #EF9F27;
+    --red: #E24B4A;
+    --gray: #888780;
+    --gray-light: #F1EFE8;
+    --bg: #F8F8F6;
+    --card: #FFFFFF;
+    --text: #2C2C2A;
+    --text-muted: #5F5E5A;
+    --border: rgba(0,0,0,0.1);
+    --timer-color: var(--purple);
+    --radius: 12px;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; width: 100%; max-width: 820px; padding: 24px 16px; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+  /* ── START SCREEN ── */
+  #start-screen { justify-content: center; min-height: 100vh; gap: 32px; }
+  .logo { text-align: center; }
+  .logo h1 { font-size: 2.4rem; font-weight: 700; color: var(--purple-dark); letter-spacing: -1px; }
+  .logo p { color: var(--text-muted); margin-top: 6px; font-size: 1rem; }
+  .logo .logo-icon { font-size: 3rem; margin-bottom: 8px; }
+
+  .mode-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    width: 100%;
+    max-width: 420px;
+  }
+  .mode-card h2 { font-size: 1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 16px; }
+
+  .mode-options { display: flex; gap: 10px; }
+  .mode-btn {
+    flex: 1; padding: 14px 8px; border: 2px solid var(--border);
+    border-radius: 10px; background: var(--card); cursor: pointer;
+    font-size: .95rem; font-weight: 500; color: var(--text);
+    transition: all .15s; text-align: center;
+  }
+  .mode-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .mode-btn.selected { border-color: var(--purple); background: var(--purple-light); color: var(--purple-dark); }
+  .mode-btn .mode-time { font-size: .75rem; color: var(--text-muted); margin-top: 3px; }
+  .mode-btn.selected .mode-time { color: var(--purple); }
+
+  .start-btn {
+    background: var(--purple); color: #fff; border: none;
+    padding: 16px 48px; border-radius: 50px; font-size: 1.1rem;
+    font-weight: 600; cursor: pointer; transition: all .15s;
+    box-shadow: 0 4px 16px rgba(127,119,221,.35);
+  }
+  .start-btn:hover { background: var(--purple-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(127,119,221,.4); }
+  .start-btn:active { transform: translateY(0); }
+
+  /* DSA Legend */
+  .legend-toggle {
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 16px; font-size: .85rem; color: var(--text-muted);
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+  .legend-toggle:hover { border-color: var(--purple); color: var(--purple); }
+  .legend-toggle .arrow { transition: transform .2s; }
+  .legend-toggle.open .arrow { transform: rotate(180deg); }
+  .legend-panel {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 24px; max-width: 420px;
+    width: 100%; display: none; animation: slideDown .2s ease;
+  }
+  .legend-panel.open { display: block; }
+  @keyframes slideDown { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
+  .legend-panel h3 { font-size: .85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: .88rem; line-height: 1.5; }
+  .legend-badge { background: var(--purple-light); color: var(--purple-dark); font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+  .legend-badge.teal { background: var(--teal-light); color: var(--teal); }
+
+  /* ── GAME SCREEN ── */
+  #game-screen { gap: 0; padding: 0; min-height: 100vh; }
+
+  .game-header {
+    width: 100%; max-width: 820px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 16px 0;
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid transparent;
+  }
+  .game-header.scrolled { border-bottom-color: var(--border); }
+  .score-chip {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 14px; font-size: .85rem;
+    font-weight: 600; color: var(--text-muted); white-space: nowrap;
+  }
+  .score-chip span { color: var(--purple-dark); }
+  .back-btn {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 14px; font-size: .85rem;
+    font-weight: 600; cursor: pointer; color: var(--text-muted);
+    transition: all .15s; white-space: nowrap;
+  }
+  .back-btn:hover:not(:disabled) { border-color: var(--purple); color: var(--purple); }
+  .back-btn:disabled { opacity: .4; cursor: default; }
+
+  .exit-btn {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 14px; font-size: .85rem;
+    font-weight: 600; cursor: pointer; color: var(--text-muted);
+    transition: all .15s; white-space: nowrap;
+  }
+  .exit-btn:hover { border-color: var(--red); color: var(--red); background: #FEF3F3; }
+
+  .exit-icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .spacer { flex: 1; }
+
+  /* Timer bar */
+  .timer-wrap { width: 100%; padding: 10px 16px 4px; }
+  .timer-bar-bg {
+    width: 100%; height: 10px; background: var(--gray-light);
+    border-radius: 5px; overflow: hidden;
+  }
+  .timer-bar-fill {
+    height: 100%; background: var(--timer-color);
+    border-radius: 5px;
+    transition: width .5s linear, background-color .5s;
+  }
+  .timer-label {
+    display: flex; justify-content: space-between;
+    font-size: .78rem; color: var(--text-muted); margin-top: 4px; padding: 0 2px;
+  }
+
+  /* Flowchart area */
+  .flowchart-area {
+    width: 100%; padding: 8px 16px 40px;
+    overflow: visible;
+    flex: 1;
+  }
+  #flowchart-svg { display: block; width: 100%; overflow: visible; }
+
+  /* ── OVERLAY SCREENS ── */
+  .overlay-screen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(20,20,20,.65); z-index: 100;
+    visibility: hidden; opacity: 0; pointer-events: none;
+    transition: opacity .2s, visibility .2s;
+  }
+  .overlay-screen.active {
+    visibility: visible; opacity: 1; pointer-events: auto;
+  }
+
+  .overlay-card {
+    background: var(--card); border-radius: 20px;
+    padding: 40px 48px; text-align: center;
+    max-width: 420px; width: 90%;
+    animation: popIn .35s cubic-bezier(.175,.885,.32,1.275);
+  }
+  @keyframes popIn { from { opacity:0; transform: scale(.8); } to { opacity:1; transform: scale(1); } }
+
+  /* Win overlay */
+  .checkmark {
+    width: 80px; height: 80px; background: var(--teal-light);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px; font-size: 2.4rem;
+    animation: checkPop .4s .15s cubic-bezier(.175,.885,.32,1.275) both;
+  }
+  @keyframes checkPop { from { transform: scale(0); opacity:0; } to { transform: scale(1); opacity:1; } }
+  .win-check { color: var(--teal); font-size: 2.4rem; }
+
+  .overlay-card h2 { font-size: 1.9rem; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+  .overlay-card .sub { color: var(--text-muted); font-size: 1rem; margin-bottom: 24px; line-height: 1.6; }
+  .overlay-card .stat { font-weight: 700; color: var(--purple-dark); }
+
+  .play-again-btn {
+    background: var(--purple); color: #fff; border: none;
+    padding: 14px 40px; border-radius: 50px; font-size: 1rem;
+    font-weight: 600; cursor: pointer; transition: all .15s;
+    box-shadow: 0 4px 14px rgba(127,119,221,.35);
+  }
+  .play-again-btn:hover { background: var(--purple-dark); transform: translateY(-1px); }
+
+  .overlay-btns {
+    display: flex; flex-direction: column; gap: 10px; align-items: center;
+  }
+
+  .new-game-btn {
+    background: none; border: 1.5px solid var(--border);
+    color: var(--text-muted); padding: 10px 32px;
+    border-radius: 50px; font-size: .9rem; font-weight: 500;
+    cursor: pointer; transition: all .15s;
+  }
+  .new-game-btn:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-light); }
+
+  /* Timeout overlay */
+  .timeout-icon { font-size: 3rem; margin-bottom: 12px; }
+  .restart-btn {
+    background: var(--red); color: #fff; border: none;
+    padding: 14px 40px; border-radius: 50px; font-size: 1rem;
+    font-weight: 600; cursor: pointer; transition: all .15s;
+  }
+  .restart-btn:hover { opacity: .85; }
+
+  /* ── SVG NODE STYLES ── */
+  .node-rect {
+    rx: 12; transition: all .3s;
+    filter: none;
+  }
+  .node-group { cursor: pointer; }
+  .node-group:focus { outline: none; }
+  .node-group:focus .node-rect { stroke-width: 3 !important; }
+
+  /* Branch button styles applied via JS */
+
+  /* ── MOBILE ── */
+  @media (max-width: 600px) {
+    .logo h1 { font-size: 1.8rem; }
+    .mode-options { flex-direction: column; }
+    .overlay-card { padding: 28px 24px; }
+    .game-header { flex-wrap: wrap; gap: 8px; }
+  }
+
+  /* Animated edge */
+  @keyframes drawEdge {
+    from { stroke-dashoffset: 300; }
+    to   { stroke-dashoffset: 0; }
+  }
+  .edge-animate {
+    stroke-dasharray: 300;
+    animation: drawEdge .4s ease forwards;
+  }
+
+  /* Pulse on active node */
+  @keyframes pulse {
+    0%,100% { filter: drop-shadow(0 0 0px rgba(127,119,221,0)); }
+    50%      { filter: drop-shadow(0 0 8px rgba(127,119,221,.6)); }
+  }
+  .pulse { animation: pulse 1.5s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ START SCREEN ═══════════════════════════════ -->
+<div class="screen active" id="start-screen">
+  <div class="logo">
+    <div class="logo-icon">⬡</div>
+    <h1>Mathflow</h1>
+    <p>Navigate the decision tree — solve each math node to advance</p>
+  </div>
+
+  <div class="mode-card">
+    <h2>Choose your timing mode</h2>
+    <div class="mode-options">
+      <button class="mode-btn" data-time="90" onclick="selectMode(this)">
+        Easy<div class="mode-time">90 sec</div>
+      </button>
+      <button class="mode-btn selected" data-time="60" onclick="selectMode(this)">
+        Normal<div class="mode-time">60 sec</div>
+      </button>
+      <button class="mode-btn" data-time="30" onclick="selectMode(this)">
+        Speed<div class="mode-time">30 sec</div>
+      </button>
+    </div>
+  </div>
+
+  <button class="start-btn" onclick="startGame()">Start Round →</button>
+
+  <button class="legend-toggle" id="legend-toggle" onclick="toggleLegend()" aria-expanded="false">
+    <span>⬡</span> DSA Legend <span class="arrow">▾</span>
+  </button>
+  <div class="legend-panel" id="legend-panel" role="region" aria-label="DSA Legend">
+    <h3>How it works</h3>
+    <div class="legend-item">
+      <span class="legend-badge">Queue</span>
+      <span>Problems are stored in a <strong>FIFO queue</strong>. Each round dequeues the next node to solve.</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-badge">Binary Tree</span>
+      <span>Each problem is a <strong>binary tree node</strong> with two answer branches — one correct, one wrong.</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-badge teal">Stack</span>
+      <span>Your traversal history is a <strong>stack</strong>. Hit Back to pop the last correct step and revisit.</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-badge">DAG</span>
+      <span>Your path through the flowchart traces a <strong>directed acyclic graph</strong> — no cycles, forward only.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ GAME SCREEN ═══════════════════════════════ -->
+<div class="screen" id="game-screen">
+  <div class="game-header" id="game-header">
+    <div class="score-chip">Solved: <span id="score-display">0</span></div>
+    <div class="score-chip">Queue: <span id="queue-display">0</span></div>
+    <div class="spacer"></div>
+    <button class="back-btn" id="back-btn" onclick="goBack()" disabled aria-label="Go back">← Back</button>
+    <button class="exit-btn" onclick="confirmExit()" aria-label="Exit game">✕ Exit</button>
+  </div>
+
+  <div class="timer-wrap">
+    <div class="timer-bar-bg">
+      <div class="timer-bar-fill" id="timer-bar"></div>
+    </div>
+    <div class="timer-label">
+      <span id="timer-label-left">Time</span>
+      <span id="timer-label-right">60s</span>
+    </div>
+  </div>
+
+  <div class="flowchart-area" id="flowchart-area">
+    <svg id="flowchart-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ WIN OVERLAY ═══════════════════════════════ -->
+<div class="overlay-screen" id="win-screen" role="dialog" aria-modal="true" aria-labelledby="win-title">
+  <div class="overlay-card">
+    <div class="checkmark"><span class="win-check">✓</span></div>
+    <h2 id="win-title">Congratulations!</h2>
+    <p class="sub" id="win-sub">You cleared all nodes!</p>
+    <div class="overlay-btns">
+      <button class="play-again-btn" onclick="startGame()">Play Again →</button>
+      <button class="new-game-btn" onclick="goToStart()">Change Mode</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ EXIT CONFIRM OVERLAY ══════════════════════ -->
+<div class="overlay-screen" id="exit-screen" role="dialog" aria-modal="true" aria-labelledby="exit-title">
+  <div class="overlay-card">
+    <div class="exit-icon">⚑</div>
+    <h2 id="exit-title">Quit this round?</h2>
+    <p class="sub">Your progress will be lost.<br>You can start fresh or change your timing mode.</p>
+    <div class="overlay-btns">
+      <button class="play-again-btn" onclick="resumeGame()">Keep Playing</button>
+      <button class="restart-btn" onclick="startGame()" style="margin-top:0">Restart Round</button>
+      <button class="new-game-btn" onclick="goToStart()">Change Mode</button>
+    </div>
+  </div>
+</div>
+  <div class="overlay-card">
+    <div class="timeout-icon">⏱</div>
+    <h2 id="timeout-title">Time's Up!</h2>
+    <p class="sub" id="timeout-sub"></p>
+    <div class="overlay-btns">
+      <button class="restart-btn" onclick="startGame()">Try Again →</button>
+      <button class="new-game-btn" onclick="goToStart()">Change Mode</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  DSA CORE STRUCTURES
+// ═══════════════════════════════════════════════════════
+
+class Queue {
+  constructor() { this._data = []; }
+  enqueue(item) { this._data.push(item); }
+  dequeue() { return this._data.shift(); }
+  peek() { return this._data[0]; }
+  get size() { return this._data.length; }
+  isEmpty() { return this._data.length === 0; }
+}
+
+class Stack {
+  constructor() { this._data = []; }
+  push(item) { this._data.push(item); }
+  pop() { return this._data.pop(); }
+  peek() { return this._data[this._data.length - 1]; }
+  get size() { return this._data.length; }
+  isEmpty() { return this._data.length === 0; }
+}
+
+// ═══════════════════════════════════════════════════════
+//  PROBLEM GENERATION
+// ═══════════════════════════════════════════════════════
+
+function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function generateProblem() {
+  const ops = ['+', '-', '×', '÷'];
+  let op, a, b, correct, question;
+
+  while (true) {
+    op = ops[randInt(0, 3)];
+    if (op === '+') {
+      a = randInt(1, 20); b = randInt(1, 20);
+      correct = a + b;
+      question = `${a} + ${b} = ?`;
+    } else if (op === '-') {
+      a = randInt(1, 20); b = randInt(1, a);
+      correct = a - b;
+      question = `${a} − ${b} = ?`;
+    } else if (op === '×') {
+      a = randInt(1, 12); b = randInt(1, 12);
+      correct = a * b;
+      question = `${a} × ${b} = ?`;
+    } else {
+      b = randInt(1, 10); correct = randInt(1, 10); a = b * correct;
+      question = `${a} ÷ ${b} = ?`;
+    }
+    break;
+  }
+
+  // Generate plausible wrong answer (±1 to ±5, different from correct)
+  let wrong;
+  do {
+    const delta = randInt(1, 5) * (Math.random() < .5 ? 1 : -1);
+    wrong = correct + delta;
+  } while (wrong === correct || wrong < 0);
+
+  const correctOnLeft = Math.random() < .5;
+  return {
+    id: Math.random().toString(36).slice(2),
+    question,
+    leftLabel: `= ${correctOnLeft ? correct : wrong}`,
+    rightLabel: `= ${correctOnLeft ? wrong : correct}`,
+    correctSide: correctOnLeft ? 'left' : 'right',
+    state: 'pending' // pending | active | correct | dead-end
+  };
+}
+
+function generateRound(count) {
+  const q = new Queue();
+  for (let i = 0; i < count; i++) q.enqueue(generateProblem());
+  return q;
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════
+
+let state = {
+  queue: null,
+  historyStack: null,
+  solvedNodes: [],  // array of problem nodes solved in order
+  activeNode: null,
+  timeLimit: 60,
+  timeRemaining: 60,
+  timerInterval: null,
+  score: 0,
+  totalProblems: 0,
+  running: false,
+  deadEndNode: null, // node in error state
+};
+
+// ═══════════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════════
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.overlay-screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function showOverlay(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function hideOverlay(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('active');
+}
+
+function selectMode(btn) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function toggleLegend() {
+  const panel = document.getElementById('legend-panel');
+  const btn = document.getElementById('legend-toggle');
+  const open = panel.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', open);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════════════
+
+function startTimer() {
+  clearInterval(state.timerInterval);
+  updateTimerUI();
+  state.timerInterval = setInterval(() => {
+    state.timeRemaining = Math.max(0, state.timeRemaining - 0.5);
+    updateTimerUI();
+    if (state.timeRemaining <= 0) {
+      clearInterval(state.timerInterval);
+      triggerTimeout();
+    }
+  }, 500);
+}
+
+function stopTimer() {
+  clearInterval(state.timerInterval);
+}
+
+function updateTimerUI() {
+  const pct = state.timeRemaining / state.timeLimit;
+  const bar = document.getElementById('timer-bar');
+  const lbl = document.getElementById('timer-label-right');
+  if (!bar || !lbl) return;
+
+  bar.style.width = (pct * 100) + '%';
+
+  // Color transition: purple → amber → red
+  let color;
+  if (pct > 0.5)       color = '#7F77DD';
+  else if (pct > 0.25) color = '#EF9F27';
+  else                 color = '#E24B4A';
+  bar.style.backgroundColor = color;
+
+  lbl.textContent = Math.ceil(state.timeRemaining) + 's';
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME FLOW
+// ═══════════════════════════════════════════════════════
+
+function startGame() {
+  hideOverlay('win-screen');
+  hideOverlay('timeout-screen');
+
+  const modeBtn = document.querySelector('.mode-btn.selected');
+  state.timeLimit = parseInt(modeBtn.dataset.time);
+  state.timeRemaining = state.timeLimit;
+  state.score = 0;
+  state.running = true;
+  state.solvedNodes = [];
+  state.deadEndNode = null;
+
+  const count = randInt(6, 8);
+  state.queue = generateRound(count);
+  state.totalProblems = count;
+  state.historyStack = new Stack();
+
+  state.activeNode = state.queue.dequeue();
+  state.activeNode.state = 'active';
+
+  showScreen('game-screen');
+  updateScoreUI();
+  renderFlowchart();
+  startTimer();
+}
+
+function updateScoreUI() {
+  document.getElementById('score-display').textContent = state.score;
+  document.getElementById('queue-display').textContent =
+    state.queue.size + (state.activeNode ? 1 : 0);
+  document.getElementById('back-btn').disabled = state.historyStack.isEmpty();
+}
+
+function onBranchClick(side) {
+  if (!state.running || !state.activeNode) return;
+
+  if (side === state.activeNode.correctSide) {
+    // Correct!
+    state.activeNode.state = 'correct';
+    state.historyStack.push(state.activeNode);
+    state.solvedNodes.push(state.activeNode);
+    state.deadEndNode = null;
+    state.score++;
+
+    if (state.queue.isEmpty()) {
+      // All done!
+      stopTimer();
+      state.activeNode = null;
+      renderFlowchart(false, false);
+      triggerWin();
+    } else {
+      state.activeNode = state.queue.dequeue();
+      state.activeNode.state = 'active';
+      renderFlowchart(false, true);  // scroll to new question
+    }
+  } else {
+    // Wrong — dead-end state
+    state.deadEndNode = state.activeNode;
+    state.activeNode.state = 'dead-end';
+    renderFlowchart(true, false);
+    // Restore to active after shake animation
+    setTimeout(() => {
+      state.activeNode.state = 'active';
+      state.deadEndNode = null;
+      renderFlowchart(false, false);
+    }, 900);
+  }
+  updateScoreUI();
+}
+
+function goBack() {
+  if (state.historyStack.isEmpty()) return;
+  const prev = state.historyStack.pop();
+  // Put active node back to queue front (re-add as first)
+  if (state.activeNode) {
+    state.activeNode.state = 'pending';
+    // We'll rebuild the queue by prepending
+    const tempItems = [];
+    tempItems.push(state.activeNode);
+    while (!state.queue.isEmpty()) tempItems.push(state.queue.dequeue());
+    state.queue = new Queue();
+    tempItems.forEach(i => state.queue.enqueue(i));
+  }
+  prev.state = 'active';
+  state.activeNode = prev;
+  // Remove from solved
+  state.solvedNodes = state.solvedNodes.filter(n => n.id !== prev.id);
+  state.score = Math.max(0, state.score - 1);
+  renderFlowchart(false, false);
+  updateScoreUI();
+}
+
+function triggerWin() {
+  state.running = false;
+  const remaining = Math.ceil(state.timeRemaining);
+  document.getElementById('win-sub').innerHTML =
+    `Time remaining: <span class="stat">${remaining}s</span> &nbsp;·&nbsp; Problems solved: <span class="stat">${state.score}</span>`;
+  showOverlay('win-screen');
+}
+
+function triggerTimeout() {
+  state.running = false;
+  document.getElementById('timeout-sub').innerHTML =
+    `You solved <span style="font-weight:700;color:#7F77DD">${state.score}</span> of ${state.totalProblems} problems.<br>Better luck next time!`;
+  showOverlay('timeout-screen');
+}
+
+function goToStart() {
+  hideOverlay('win-screen');
+  hideOverlay('timeout-screen');
+  hideOverlay('exit-screen');
+  stopTimer();
+  state.running = false;
+  state.activeNode = null;
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  showScreen('start-screen');
+}
+
+function confirmExit() {
+  stopTimer();
+  showOverlay('exit-screen');
+}
+
+function resumeGame() {
+  hideOverlay('exit-screen');
+  startTimer();
+}
+
+// ═══════════════════════════════════════════════════════
+//  FLOWCHART RENDERER (SVG, downward flow)
+// ═══════════════════════════════════════════════════════
+
+const NODE_W = 220;
+const NODE_H = 64;
+const V_GAP = 90;    // vertical gap between node bottom and branch buttons
+const BRANCH_H = 48;
+const BRANCH_W = 105;
+const BRANCH_GAP = 18;
+const SVG_PAD_X = 30;
+const SVG_PAD_TOP = 20;
+
+// Colors
+const COL = {
+  active:   { fill: '#EEEDFE', stroke: '#7F77DD', text: '#3C3489' },
+  correct:  { fill: '#E1F5EE', stroke: '#1D9E75', text: '#085041' },
+  pending:  { fill: '#F8F8F6', stroke: '#B4B2A9', text: '#888780' },
+  'dead-end': { fill: '#FEF3F3', stroke: '#E24B4A', text: '#A32D2D' },
+};
+
+function svgEl(tag, attrs, text) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (text != null) el.textContent = text;
+  return el;
+}
+
+function renderFlowchart(shake, scroll) {
+  const svgEl_ = document.getElementById('flowchart-svg');
+  if (!svgEl_) return;
+  svgEl_.innerHTML = '';
+
+  const allNodes = [...state.solvedNodes];
+  if (state.activeNode) allNodes.push(state.activeNode);
+
+  // Pending queue nodes (not yet dequeued)
+  const pendingNodes = [];
+  {
+    let tmp = new Queue();
+    while (!state.queue.isEmpty()) {
+      const n = state.queue.dequeue();
+      pendingNodes.push(n);
+      tmp.enqueue(n);
+    }
+    state.queue = tmp;
+  }
+  const displayNodes = [...allNodes, ...pendingNodes];
+
+  const totalCount = displayNodes.length;
+  if (totalCount === 0) return;
+
+  // Layout: nodes stack vertically, centered
+  // For each solved/pending node: NODE_H + V_GAP + BRANCH_H gap then next node
+  // For active node: show branch buttons below
+
+  const svgWidth = Math.max(500, NODE_W + 2 * BRANCH_W + BRANCH_GAP * 2 + SVG_PAD_X * 2);
+  const cx = svgWidth / 2;
+
+  // Compute total height
+  let totalH = SVG_PAD_TOP;
+  displayNodes.forEach((n, i) => {
+    totalH += NODE_H;
+    const isActive = n.state === 'active' || n.state === 'dead-end';
+    if (isActive) {
+      totalH += V_GAP + BRANCH_H;
+    } else if (i < displayNodes.length - 1) {
+      totalH += 50; // connector gap
+    }
+  });
+  totalH += SVG_PAD_TOP;
+
+  svgEl_.setAttribute('viewBox', `0 0 ${svgWidth} ${totalH}`);
+  svgEl_.setAttribute('width', '100%');
+  svgEl_.style.minWidth = '320px';
+
+  // Add defs for arrowhead
+  const defs = svgEl('defs', {});
+  defs.innerHTML = `<marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#B4B2A9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  <marker id="arr-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#7F77DD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  <marker id="arr-correct" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>`;
+  svgEl_.appendChild(defs);
+
+  let y = SVG_PAD_TOP;
+  let activeNodeY = null; // SVG y-coordinate of the active node rect
+
+  displayNodes.forEach((node, i) => {
+    const col = COL[node.state] || COL.pending;
+    const nodeX = cx - NODE_W / 2;
+    const isActive = node.state === 'active' || node.state === 'dead-end';
+    const isPending = node.state === 'pending';
+    const isCorrect = node.state === 'correct';
+
+    // Draw connector from previous node
+    if (i > 0) {
+      const prevNode = displayNodes[i - 1];
+      const prevIsActive = prevNode.state === 'active' || prevNode.state === 'dead-end';
+      // Connector line from bottom of prev node to top of this node
+      // (already handled in the branch rendering below)
+    }
+
+    // Node group
+    const g = svgEl('g', {
+      class: isPending ? '' : '',
+      opacity: isPending ? '0.45' : '1'
+    });
+
+    // Node rect
+    const shakeClass = (shake && isActive) ? ' shake' : '';
+    const pulseClass = isActive ? ' pulse' : '';
+
+    if (isActive) activeNodeY = y; // capture SVG y of this node
+
+    const rect = svgEl('rect', {
+      x: nodeX, y: y,
+      width: NODE_W, height: NODE_H,
+      rx: 12,
+      fill: col.fill,
+      stroke: col.stroke,
+      'stroke-width': isActive ? '2.5' : '1.5',
+      class: 'node-rect' + pulseClass,
+      style: shake && isActive ? 'animation: shakeAnim .4s ease' : ''
+    });
+    g.appendChild(rect);
+
+    // Question number badge
+    const badgeText = `${i + 1}`;
+    const badge = svgEl('circle', {
+      cx: nodeX + 20, cy: y + NODE_H / 2,
+      r: 11, fill: col.stroke, opacity: isPending ? '0.5' : '1'
+    });
+    g.appendChild(badge);
+
+    const badgeLabel = svgEl('text', {
+      x: nodeX + 20, y: y + NODE_H / 2,
+      'text-anchor': 'middle', 'dominant-baseline': 'central',
+      fill: '#fff', 'font-size': '11', 'font-weight': '600'
+    }, badgeText);
+    g.appendChild(badgeLabel);
+
+    // Question text (may need to truncate for mobile)
+    const qText = svgEl('text', {
+      x: cx, y: y + NODE_H / 2,
+      'text-anchor': 'middle', 'dominant-baseline': 'central',
+      fill: col.text, 'font-size': '17', 'font-weight': '600',
+      'font-family': 'system-ui, sans-serif'
+    }, node.question);
+    g.appendChild(qText);
+
+    // Correct checkmark overlay
+    if (isCorrect) {
+      const check = svgEl('text', {
+        x: nodeX + NODE_W - 18, y: y + NODE_H / 2,
+        'text-anchor': 'middle', 'dominant-baseline': 'central',
+        fill: '#1D9E75', 'font-size': '16'
+      }, '✓');
+      g.appendChild(check);
+    }
+
+    svgEl_.appendChild(g);
+
+    const nodeBottomY = y + NODE_H;
+
+    if (isActive) {
+      // Draw branch buttons below the active node
+      const branchTopY = nodeBottomY + V_GAP;
+      const leftBX = cx - BRANCH_GAP / 2 - BRANCH_W;
+      const rightBX = cx + BRANCH_GAP / 2;
+
+      // Left connector line: from node bottom → branch button
+      const leftLineX = cx - BRANCH_GAP / 2 - BRANCH_W / 2;
+      const rightLineX = cx + BRANCH_GAP / 2 + BRANCH_W / 2;
+
+      // Central vertical stem
+      const stemLine = svgEl('line', {
+        x1: cx, y1: nodeBottomY,
+        x2: cx, y2: nodeBottomY + 25,
+        stroke: '#B4B2A9', 'stroke-width': '1.5',
+        'marker-end': 'url(#arr)'
+      });
+      svgEl_.appendChild(stemLine);
+
+      // Horizontal divider
+      const horizLine = svgEl('line', {
+        x1: leftLineX, y1: nodeBottomY + 25,
+        x2: rightLineX, y2: nodeBottomY + 25,
+        stroke: '#B4B2A9', 'stroke-width': '1.5'
+      });
+      svgEl_.appendChild(horizLine);
+
+      // Left branch vertical
+      const leftVert = svgEl('line', {
+        x1: leftLineX, y1: nodeBottomY + 25,
+        x2: leftLineX, y2: branchTopY,
+        stroke: '#B4B2A9', 'stroke-width': '1.5',
+        'marker-end': 'url(#arr)'
+      });
+      svgEl_.appendChild(leftVert);
+
+      // Right branch vertical
+      const rightVert = svgEl('line', {
+        x1: rightLineX, y1: nodeBottomY + 25,
+        x2: rightLineX, y2: branchTopY,
+        stroke: '#B4B2A9', 'stroke-width': '1.5',
+        'marker-end': 'url(#arr)'
+      });
+      svgEl_.appendChild(rightVert);
+
+      // Branch buttons (left and right)
+      ['left', 'right'].forEach(side => {
+        const bx = side === 'left' ? leftBX : rightBX;
+        const isCorrectBranch = node.correctSide === side;
+        const isDead = node.state === 'dead-end';
+        let branchFill = '#FFFFFF';
+        let branchStroke = '#7F77DD';
+        let branchText = '#3C3489';
+
+        if (isDead && !isCorrectBranch) {
+          branchFill = '#FEF3F3'; branchStroke = '#E24B4A'; branchText = '#A32D2D';
+        } else if (isDead && isCorrectBranch) {
+          branchFill = '#FFF'; branchStroke = '#7F77DD'; branchText = '#3C3489';
+        }
+
+        const label = side === 'left' ? node.leftLabel : node.rightLabel;
+
+        const bg = svgEl('rect', {
+          x: bx, y: branchTopY,
+          width: BRANCH_W, height: BRANCH_H,
+          rx: 10,
+          fill: branchFill,
+          stroke: branchStroke,
+          'stroke-width': '2',
+          style: 'cursor:pointer;transition:all .15s',
+          tabindex: '0',
+          role: 'button',
+          'aria-label': `Answer branch: ${label}`
+        });
+
+        const txt = svgEl('text', {
+          x: bx + BRANCH_W / 2,
+          y: branchTopY + BRANCH_H / 2,
+          'text-anchor': 'middle', 'dominant-baseline': 'central',
+          fill: branchText, 'font-size': '15', 'font-weight': '600',
+          'font-family': 'system-ui, sans-serif',
+          style: 'pointer-events:none'
+        }, label);
+
+        const grp = svgEl('g', {
+          class: 'node-group',
+          tabindex: '0',
+          role: 'button',
+          'aria-label': `Choose ${label}`
+        });
+        grp.appendChild(bg);
+        grp.appendChild(txt);
+
+        grp.addEventListener('click', () => onBranchClick(side));
+        grp.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onBranchClick(side); }
+        });
+
+        // Hover
+        grp.addEventListener('mouseenter', () => {
+          bg.setAttribute('fill', '#EEEDFE');
+        });
+        grp.addEventListener('mouseleave', () => {
+          bg.setAttribute('fill', branchFill);
+        });
+
+        svgEl_.appendChild(grp);
+      });
+
+      y = branchTopY + BRANCH_H;
+
+    } else if (i < displayNodes.length - 1) {
+      // Connector arrow to next node
+      const arrowMark = isCorrect ? 'url(#arr-correct)' : 'url(#arr)';
+      const lineColor = isCorrect ? '#1D9E75' : '#B4B2A9';
+      const connector = svgEl('line', {
+        x1: cx, y1: nodeBottomY,
+        x2: cx, y2: nodeBottomY + 40,
+        stroke: lineColor, 'stroke-width': '2',
+        'stroke-dasharray': isCorrect ? '0' : '4 4',
+        'marker-end': arrowMark,
+        class: i === state.solvedNodes.length - 1 ? 'edge-animate' : ''
+      });
+      svgEl_.appendChild(connector);
+      y = nodeBottomY + 46;
+    } else {
+      y = nodeBottomY;
+    }
+
+    // Add shake keyframe if needed
+    if (shake && isActive && !document.getElementById('shake-style')) {
+      const style = document.createElement('style');
+      style.id = 'shake-style';
+      style.textContent = `
+        @keyframes shakeAnim {
+          0%,100%{transform:translateX(0)}
+          20%{transform:translateX(-6px)}
+          40%{transform:translateX(6px)}
+          60%{transform:translateX(-4px)}
+          80%{transform:translateX(4px)}
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  });
+
+  // Scroll just enough to bring the active node (question box + branches) into view
+  if (scroll && activeNodeY !== null) {
+    setTimeout(() => {
+      const svg = document.getElementById('flowchart-svg');
+      if (!svg) return;
+      const svgRect = svg.getBoundingClientRect();
+      // SVG uses a viewBox — compute the scale factor from SVG units to CSS pixels
+      const svgViewH = totalH;
+      const svgRenderedH = svgRect.height;
+      const scale = svgRenderedH / svgViewH;
+      // Top of active node in page coordinates
+      const nodeTopPx = window.scrollY + svgRect.top + activeNodeY * scale;
+      // Bottom of node + branch area in page coordinates (node + V_GAP + BRANCH_H + padding)
+      const nodeBottomPx = nodeTopPx + (NODE_H + V_GAP + BRANCH_H + 24) * scale;
+      // Scroll so that nodeBottomPx sits 24px above the viewport bottom
+      window.scrollTo({ top: nodeBottomPx - window.innerHeight + 24, behavior: 'smooth' });
+    }, 60);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  KEYBOARD NAVIGATION (global)
+// ═══════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  // Escape: resume if exit dialog is open
+  if (e.key === 'Escape') {
+    const exitOpen = document.getElementById('exit-screen').classList.contains('active');
+    if (exitOpen) { resumeGame(); return; }
+  }
+  if (!state.running || !state.activeNode) return;
+  if (e.key === 'ArrowLeft' || e.key === '1') onBranchClick('left');
+  if (e.key === 'ArrowRight' || e.key === '2') onBranchClick('right');
+  if ((e.key === 'Backspace' || e.key === 'z') && (e.metaKey || e.ctrlKey || e.key === 'z')) {
+    e.preventDefault(); goBack();
+  }
+});
+
+// Sticky header shadow on scroll
+window.addEventListener('scroll', () => {
+  const header = document.getElementById('game-header');
+  if (header) header.classList.toggle('scrolled', window.scrollY > 10);
+});
+</script>
+</body>
+</html>
